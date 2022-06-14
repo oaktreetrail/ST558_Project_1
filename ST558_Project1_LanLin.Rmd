@@ -9,22 +9,77 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+library(easypackages)
+libraries("httr", "dplyr", "jsonlite", "ggplot2")
+library(stringr)
 ```
 
-## Including Plots
+# Part 2: API Interaction Functions
 
-You can also embed plots, for example:
+### 2.1 Write a function to read in the data set from API.
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+All queries are prefixed with https://api.covid19api.com/ and are GET requests unless otherwise noted.
+```{r}
+# Write a function to read in the data set from API
+get_Data <- function(url){
+                myData<- GET(paste0("https://api.covid19api.com", url))
+                parsed <- fromJSON(rawToChar(myData$content))
+                return(parsed)
+}
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+# Write a function to rename the countries
+countries_Names <- function(countries){
+  ifelse(countries %in% c("Antigua and Barbuda", "Brunei Darussalam", "Iran, Islamic Republic of", "Micronesia, Federated States of", "Taiwan, Republic of China", "Tanzania, United Republic of", "Trinidad and Tobago"), new_countries <- str_replace(word(countries, 1), ",", ""), 
+         ifelse(countries == "Congo (Brazzaville)",  new_countries <- "Republic of Congo", 
+                ifelse(countries == "Congo (Kinshasa)",  new_countries <- "Democratic Republic of the Congo",
+                       ifelse(countries == "Korea (North)", new_countries <- "North Korea",
+                              ifelse(countries == "Lao PDR", new_countries <- "Laos",
+                                     ifelse(countries == "Macedonia, Republic of", new_countries <- "North Macedonia", 
+                                            ifelse(countries == "Republic of Kosovo", new_countries <- "Kosovo", 
+                                                  ifelse(countries == "Saint Vincent and Grenadines", new_countries <- "Saint Vincent",
+                                                         ifelse(countries == "Syrian Arab Republic (Syria)", new_countries <- "Syria",
+                                                                ifelse(countries == "United Kingdom", new_countries <- "UK",
+                                                                       ifelse(countries == "United States of America", new_countries <- "USA",
+                                                                              ifelse(countries == "Viet Nam", new_countries <-"Vietnam", 
+                                                                                     ifelse(countries == "Saint Kitts and Nevis", new_countries <- "Saint Kitts", 
+                                                                                            ifelse(countries == "Korea (South)", new_countries <- "South Korea",
+                                                                                                   ifelse(countries == "Russian Federation", new_countries <- "Russia", 
+                                                                                                          new_countries <- countries)))))))))))))))
+}
+```
+
+# Part 3: EDA
+
+### 3.1 Read in the data sets
+```{r}
+covid_summary <- get_Data("/summary")$Countries %>% as_tibble()
+covid_summary$new_Countries <- countries_Names(covid_summary$Country)
+head(covid_summary)
+```
+
+
+### 3.1 Plot a spatial data to show the coronavirus cases in the world 
+```{r}
+# Read in the world map
+mapdata <- map_data("world")
+
+mapData <- left_join(mapdata, covid_summary, by = c("region" = "new_Countries") )
+
+mapdata1 <- mapData %>% filter(!is.na(mapData$TotalConfirmed))
+
+ggplot(mapdata1, aes(x= long, y =lat, group = group)) +
+  geom_polygon(aes(fill = TotalConfirmed), color = "blue") + 
+     scale_fill_gradient(name = "% vaccinated", low = "blue", high =  "darkred", na.value = "grey50") +
+      theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title.y=element_blank(),
+        axis.title.x=element_blank(),
+        rect = element_blank())
+```
+
+
