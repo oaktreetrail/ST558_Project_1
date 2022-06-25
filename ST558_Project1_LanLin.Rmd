@@ -7,12 +7,14 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'F:\\Graduate\\NCSU_courses\\ST558\\projects\\project_1')
 ```
 
-```{r}
+```{r, include=FALSE}
 library(easypackages)
-libraries("httr", "dplyr", "jsonlite", "ggplot2")
+libraries("httr", "tidyverse", "jsonlite", "DT")
 library(stringr)
+library(RColorBrewer)
 ```
 
 # Part 2: API Interaction Functions
@@ -29,9 +31,8 @@ get_Data <- function(url){
 }
 ```
 
-
+Write a function to rename the countries to match the names in map data set.
 ```{r}
-# Write a function to rename the countries
 countries_Names <- function(countries){
   ifelse(countries %in% c("Antigua and Barbuda", "Brunei Darussalam", "Iran, Islamic Republic of", "Micronesia, Federated States of", "Taiwan, Republic of China", "Tanzania, United Republic of", "Trinidad and Tobago"), new_countries <- str_replace(word(countries, 1), ",", ""), 
          ifelse(countries == "Congo (Brazzaville)",  new_countries <- "Republic of Congo", 
@@ -52,34 +53,176 @@ countries_Names <- function(countries){
 }
 ```
 
-# Part 3: EDA
-
-### 3.1 Read in the data sets
+Write a function to rename the countries in the population data set to match the names in the API data sets.
 ```{r}
+countries_Names_pop <- function(countries){
+  ifelse(countries == "Antigua And Barbuda", new_Countries <- "Antigua and Barbuda",
+         ifelse(countries == "Bosnia And Herzegovina", new_Countries <- "Bosnia and Herzegovina",
+                ifelse(countries == "Czechia", new_Countries <- "Czech Republic",
+                       ifelse(countries == "Democratic Republic Of The Congo", new_Countries <- "Congo (Kinshasa)",
+                              ifelse(countries == "Congo", new_Countries <- "Congo (Brazzaville)",
+                                     ifelse(countries == "Guinea Bissau", new_Countries <- "Guinea-Bissau",
+                                            ifelse(countries == "Holy See", new_Countries <- "Holy See (Vatican City State)",
+                                                   ifelse(countries == "Iran", new_Countries <- "Iran, Islamic Republic of", 
+                                                          ifelse(countries == "South Korea", new_Countries <- "Korea (South)",
+                                                                 ifelse(countries == "Laos", new_Countries <- "Lao PDR", 
+                                                                        ifelse(countries == "North Macedonia", new_Countries <- "Macedonia, Republic of",
+                                                                               ifelse(countries == "Micronesia (Federated States Of)", new_Countries <- "Micronesia, Federated States of", 
+                     ifelse(countries == "Palestine", new_Countries <- "Palestinian Territory", 
+                            ifelse(countries == "Kosovo", new_Countries <- "Republic of Kosovo",
+                                   ifelse(countries == "Russia", new_Countries <- "Russian Federation",
+                                          ifelse(countries == "Saint Kitts And Nevis", new_Countries <- "Saint Kitts and Nevis",
+                                                 ifelse(countries == "Sao Tome And Principe", new_Countries <- "Sao Tome and Principe",
+                                                        ifelse(countries == "Syria", new_Countries <- "Syrian Arab Republic (Syria)",
+                                                               ifelse(countries == "Taiwan", new_Countries <- "Taiwan, Republic of China",
+                                                                      ifelse(countries == "United Republic Of Tanzania", new_Countries <- "Tanzania, United Republic of",
+                      ifelse(countries == "Timor Leste", new_Countries <- "Timor-Leste",
+                             ifelse(countries == "Trinidad And Tobago", new_Countries <- "Trinidad and Tobago",
+                                    ifelse(countries == "United States Of America", new_Countries <- "United States of America",
+                                           ifelse(countries == "Venezuela", new_Countries <- "Venezuela (Bolivarian Republic)",
+                                                  ifelse(countries == "Vietnam", new_Countries <- "Viet Nam", new_countries <- countries)))))))))))))))))))))))))
+}
+```
+
+
+# Part 3: Data manipulation 
+
+### 3.1 Read in the summary data set on current day. 
+This data set includes the numbers of new deaths, total deaths, new recovered, total recovered of current day worldwide. 
+
+```{r}
+# Read in the data set
 covid_summary <- get_Data("/summary")$Countries %>% as_tibble()
+
+# Using the countries_Names function to create a new variable called new_Countries to match the country names in the map data set
 covid_summary$new_Countries <- countries_Names(covid_summary$Country)
 head(covid_summary)
 ```
 
-
-### 3.1 Plot a spatial data to show the coronavirus cases in the world 
+### 3.2 Read in the map data set.
 ```{r}
 # Read in the world map
 mapdata <- map_data("world")
 
-mapData <- left_join(mapdata, covid_summary, by = c("region" = "new_Countries") )
+# Combine the map and covid_summary data sets 
+mapData <- left_join(mapdata, covid_summary, by = c("region" = "new_Countries"))
 
+# Remove the rows which do not contain total confirmed cases numbers 
 mapdata1 <- mapData %>% filter(!is.na(mapData$TotalConfirmed))
+```
 
+
+### 3.3 Read in the population data set. 
+This is data set is downloaded from "https://www.ecdc.europa.eu/en/geographical-distribution-2019-ncov-cases".
+```{r}
+# Read in the data set
+pop <- distinct(read_csv("data.csv")[1:4])
+
+# Using the countries_Names_pop function to create a new variable Country to match the country names in the covid_summary data set. 
+pop$Country <- countries_Names_pop(pop$country)
+pop <- pop[3:5]
+
+# Combine the covid_summary and population data sets 
+covid_summary_pop <- left_join(covid_summary, pop, by = "Country")
+head(covid_summary_pop)
+```
+
+
+
+
+# Part 4: EDA 
+
+### 3.1 Plot a spatial data to show the coronavirus cases in the world 
+```{r}
 ggplot(mapdata1, aes(x= long, y =lat, group = group)) +
-  geom_polygon(aes(fill = TotalConfirmed), color = "blue") + 
-     scale_fill_gradient(name = "% vaccinated", low = "blue", high =  "darkred", na.value = "grey50") +
-      theme(axis.text.x = element_blank(),
+  geom_polygon(aes(fill = TotalConfirmed), color = "darkgreen") + 
+  scale_fill_gradient(name = "Cases", low='#EEEEEE', high='darkgreen', na.value = "grey") +
+  theme(axis.text.x = element_blank(),
         axis.text.y = element_blank(),
         axis.ticks = element_blank(),
         axis.title.y=element_blank(),
         axis.title.x=element_blank(),
-        rect = element_blank())
+        rect = element_blank()) +
+  labs(title = "Coronavirus Worldwide")
+
+# labels <- covid_summary %>% arrange(desc(TotalConfirmed)) %>% select(new_Countries) %>% slice(1:10)
 ```
+This map shows us that the United States of America has the largest total confirmed cases, followed by India. In order to further demonstrate the corona virus cases by country, two tables are created. 
+
+```{r}
+head(covid_summary_pop$TotalRecovered)
+case_tab <- covid_summary_pop %>% 
+              select(c("Country", "continent", "NewConfirmed", "TotalConfirmed", "NewDeaths", "TotalDeaths", "population"))  %>%
+                arrange(desc(TotalConfirmed)) %>%
+                  rename(Continent = continent, Population = population)
+datatable(case_tab)
+```
+
+Create a table to summary the cases by continent 
+```{r} 
+case_summary_tab <- covid_summary_pop %>% 
+                      drop_na(continent) %>%  
+                        group_by(continent) %>% 
+                          summarise(ContinentTotalConfirmed = sum(TotalConfirmed), ContinentTotalDeaths =sum(TotalDeaths)) %>%
+                            arrange(desc(ContinentTotalConfirmed))
+
+row_names <- case_summary_tab$continent
+
+case_summary_tab <- rbind(case_summary_tab[2:3],colSums(case_summary_tab[2:3]))
+case_summary_tab <- as.data.frame(case_summary_tab)
+
+rownames(case_summary_tab) <- c(row_names, "Total")
+
+datatable(case_summary_tab)
+```
+
+This table shows us that Europe has the largest total confirmed cases, while America has the largest total deaths. The total confirmed cases and total deaths are 540740012	and 6318769, respectively. 
+
+```{r}
+get_Data("/country/united-states/status/confirmed?from=2020-03-01T00:00:00Z&to=2020-03-07T00:00:00Z")
+
+
+```
+
+```{r}
+get_Data("/country/united-states/status/confirmed?from=2022-01-01T00:00:00Z&to=2022-01-07T00:00:00Z")
+```
+
+
+
+```{r}
+seq(as.Date("2000/1/1"), by = "month", length.out = 12)
+seq(as.Date("2000/1/1"), by = "week", length.out = 12)
+```
+```{r}
+get_Date <- function(start, end){
+  diff <- as.numeric(difftime(as.Date(end),as.Date(start)))
+  start_date <- seq(as.Date(start), by = "week", length.out = diff %/% 7 +1)
+  end_date <- c(seq(as.Date(start)+6, by = "week", length.out = diff %/% 7), end)
+  return(list(start_date, end_date))
+  
+}
+
+get_Date("2022-01-01", "2022-05-31")
+
+as.numeric(difftime(as.Date("2022-05-31"),as.Date("2022-01-01"))) %/% 7
+
+as.numeric(difftime(as.Date("2022-05-31"),as.Date("2022-01-01"))) %% 7
+```
+
+
+```{r}
+get_Data("/total/country/united-states")
+```
+
+
+
+
+
+
+
+
+
+
 
 
