@@ -8,19 +8,23 @@ Lan Lin
     Functions](#part-2-api-interaction-functions)
 -   [Part 3: Data manipulation](#part-3-data-manipulation)
 -   [Part 4: EDA](#part-4-eda)
+-   [Part 5: Conclusions](#part-5-conclusions)
 
 # Part 1: Required packages
 
 ### To use the functions for interacting with the Covid API, I used the following packages:
 
-`easypackage`: Easily load and install multiple packages from different
-sources `httr`: Useful tools for working with HTTP organised by HTTP
-verbs `tidyverse`: tons of useful features for data manipulation and
-visualization `jsonlite`: API interaction `DT`: Provides an R interface
-to the JavaScript library DataTables `stringr`: Provides a cohesive set
-of functions designed to make working with strings as easy as possible.
-`RColorBrewer`: Uses the work from <http://colorbrewer2.org/> to help us
-choose sensible color schemes for figures in R
+-   `easypackage`: Easily load and install multiple packages from
+    different sources
+-   `httr`: Useful tools for working with HTTP organised by HTTP verbs
+-   `tidyverse`: tons of useful features for data manipulation and
+    visualization
+-   `jsonlite`: API interaction
+-   `DT`: Provides an R interface to the JavaScript library DataTables
+-   `stringr`: Provides a cohesive set of functions designed to make
+    working with strings as easy as possible.
+-   `RColorBrewer`: Uses the work from <http://colorbrewer2.org/> to
+    help us choose sensible color schemes for figures in R
 
 # Part 2: API Interaction Functions
 
@@ -104,7 +108,18 @@ get_Date <- function(start, end){
 }
 ```
 
-### 2.5 Write a function to get the confirmed cases based on start date and end date of any country.
+### 2.5 Create a user-friendly country name function
+
+``` r
+get_Country <- function(country){
+  ifelse(toupper(country) %in% CountryCode$CountryCode, 
+         Country <- CountryCode$Country[which(CountryCode$CountryCode %in% toupper(country))],
+         Country <- country)
+  return(Country)
+}
+```
+
+### 2.6 Write a function to get the confirmed cases based on start date and end date of any country.
 
 ``` r
 get_confirmed_data <- function(start, end, country){
@@ -120,7 +135,7 @@ get_confirmed_data <- function(start, end, country){
 }
 ```
 
-### 2.6 Write a function to get the confirmed, recovered, deaths based on start date and end date of any country.
+### 2.7 Write a function to get the confirmed, recovered, deaths based on start date and end date of any country.
 
 ``` r
 get_all_data <- function(start, end, country){
@@ -146,6 +161,9 @@ recovered, total recovered of current day worldwide.
 ``` r
 # Read in the data set
 covid_summary <- get_Data("/summary")$Countries %>% as_tibble()
+
+# Create a tibble to save country code
+CountryCode <- covid_summary[2:3]
 
 # Using the countries_Names function to create a new variable called new_Countries to match the country names in the map data set
 covid_summary$new_Countries <- countries_Names(covid_summary$Country)
@@ -275,7 +293,7 @@ ggplot(mapdata1, aes(x= long, y =lat, group = group)) +
   labs(title = "Coronavirus Worldwide")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-53-1.png)<!-- -->
 
 ``` r
 # labels <- covid_summary %>% arrange(desc(TotalConfirmed)) %>% select(new_Countries) %>% slice(1:10)
@@ -295,7 +313,7 @@ case_tab <- covid_summary_pop %>%
 datatable(case_tab)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-54-1.png)<!-- -->
 
 ### 4.3 Summary corona virus cases by continent
 
@@ -316,7 +334,7 @@ rownames(case_summary_tab) <- c(row_names, "Total")
 datatable(case_summary_tab)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-55-1.png)<!-- -->
 
 This table shows us that Europe has the largest total confirmed cases,
 while America has the largest total deaths. The total confirmed cases
@@ -390,7 +408,7 @@ ggplot(covid_summary_hist, aes(x= ConfirmedProportion)) +
   labs(title = "Histogram Plot of the Proportion of Confirmed Cases")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-22-1.png)<!-- --> This
+![](README_files/figure-gfm/unnamed-chunk-58-1.png)<!-- --> This
 histogram shows us that most of the countries had less than 20% of their
 population contracted the corona virus. These proportions were up to
 roughly 60% in some countries. However, this numbers are highly
@@ -408,7 +426,7 @@ confirm_vs_death +
   labs(title = "Scatter Plot of the relationship between total confirmed cases and total deaths by country", x= "log2(TotalDeaths)", y= "log2(TotalConfirmed)")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-23-1.png)<!-- --> In this
+![](README_files/figure-gfm/unnamed-chunk-59-1.png)<!-- --> In this
 scatter plot, I did log2 transformation of both TotalConfrimed and
 TotalDeath. This plot shows us that log2(TotalConfrimed) and
 log2(TotalDeath) had a roughly linear relationship among countries. The
@@ -427,7 +445,7 @@ Jan 1, 2022 to May 31, 2022.
 datatable(US_NewCase_StateSum %>% arrange(desc(TotalNewCases)))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-60-1.png)<!-- -->
 
 ### 4.8 Create a box plot of Daily New Cases in the top 10 States in the period of Jan 1, 2022 to May 31, 2022 by state.
 
@@ -439,7 +457,7 @@ ggplot(US_NewCase_byState, aes(x = Province, y = Sum)) +
   labs(x= "Sates", y= "Daily New Cases", title = "Box Plot of Daily New Cases in the top 10 States")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-61-1.png)<!-- -->
 
 This box plot shows us that California had the largest range and highest
 daily new cases in the period of Jan 1, 2022 to May 31, 2022. And all
@@ -472,7 +490,7 @@ ggplot(CA_NewCases, aes(x= City)) +
   labs(x= "California", y= "Days of Daily New Cases exceeded 5,000", title = "Bar Plot of Days of Daily New Cases exceeded 5,000 in California")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-63-1.png)<!-- -->
 
 This bar plot shows us that Los Angeles had the most days with daily
 cases greater than 5,000 in the period of Jan 1, 2022 to May 31, 2022,
@@ -492,30 +510,30 @@ ggplot(data = LA_all, aes(x = Date, y = Cases)) +
   labs(title = "Daily New Cases in Los Angeles, CA")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-64-1.png)<!-- -->
 
 This plot shows us that the corona virus cases surged in January,2022 in
 Los Angeles, CA. The new daily deaths were much samller than the new
 active and new confirmed cases. So, it is hard to see it in the plot.
 
-### Part 5: Conclusions
+# Part 5: Conclusions
 
-In this project, I created six functions (get_Data, countries_Names,
-countries_Names_pop, get_Date, get_confirmed_data and get_all_data) to
-interact with the coronavirus API. The data were pulled from three
-endpoints (Summary, By Country and All Status By Country). First, I
-plotted spatial data to show the coronavirus cases in the world map.
-This map indicated that the United States of America had the largest
-total confirmed cases, followed by India and Brazil. This conclusion was
-confirmed by the coronavirus case summary by country. Europe had the
-largest total confirmed cases, while America had the largest total
-deaths.Then, I created a histogram to show that most of the countries
-had less than 20% of their population contracted the coronavirus. These
-proportions were up to roughly 60% in some countries. The scatter plot
-showed us that log2(TotalConfrimed) and log2(TotalDeath) had a roughly
-linear relationship among countries. Since the US had the largest
-numbers of cases, I further looked into the data in the US. California
-had the highest case numbers in the period of Jan 1, 2022 to May 31,
-2022, followed by Florida and Texas. In California, Los Angeles had the
-most days with daily cases greater than 5,000. And the cases surged in
-Jan 2022 in Los Angeles, CA.
+In this project, I created seven functions (get_Data, countries_Names,
+countries_Names_pop, get_Date, get_Country, get_confirmed_data and
+get_all_data) to interact with the coronavirus API. The data were pulled
+from three endpoints (Summary, By Country and All Status By Country).
+First, I plotted spatial data to show the coronavirus cases in the world
+map. This map indicated that the United States of America had the
+largest total confirmed cases, followed by India and Brazil. This
+conclusion was confirmed by the coronavirus case summary by country.
+Europe had the largest total confirmed cases, while America had the
+largest total deaths.Then, I created a histogram to show that most of
+the countries had less than 20% of their population contracted the
+coronavirus. These proportions were up to roughly 60% in some countries.
+The scatter plot showed us that log2(TotalConfrimed) and
+log2(TotalDeath) had a roughly linear relationship among countries.
+Since the US had the largest numbers of cases, I further looked into the
+data in the US. California had the highest case numbers in the period of
+Jan 1, 2022 to May 31, 2022, followed by Florida and Texas. In
+California, Los Angeles had the most days with daily cases greater than
+5,000. And the cases surged in Jan 2022 in Los Angeles, CA.
