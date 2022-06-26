@@ -193,7 +193,7 @@ pop <- distinct(read_csv("data.csv")[1:4])
 ```
 
     ## Rows: 53072 Columns: 11
-    ## -- Column specification -----------------------------------------------------------------------------------------------------------------------------------------------------
+    ## -- Column specification ----------------------------------------------------------------------------------------------------------------------------------------------------
     ## Delimiter: ","
     ## chr (6): country, country_code, continent, indicator, year_week, source
     ## dbl (4): population, weekly_count, rate_14_day, cumulative_count
@@ -317,9 +317,10 @@ ggplot(mapdata1, aes(x= long, y =lat, group = group)) +
   labs(title = "Coronavirus Worldwide")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- --> This map
-shows us that the United States of America has the largest total
-confirmed cases, followed by India and Brazil. In order to further
+![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+
+This map shows us that the United States of America has the largest
+total confirmed cases, followed by India and Brazil. In order to further
 demonstrate the corona virus cases by country, two tables are created.
 
 ### 4.2 Summary corona virus cases by country
@@ -449,9 +450,10 @@ confirm_vs_death +
   labs(title = "Scatter Plot of the relationship between total confirmed cases and total deaths by country", x= "log2(TotalDeaths)", y= "log2(TotalConfirmed)")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-24-1.png)<!-- --> In this
-scatter plot, I did log2 transformation on both TotalConfrimed and
-TotalDeath. This plot shows us that log2(TotalConfrimed) and
+![](README_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
+
+In this scatter plot, I did log2 transformation on both TotalConfrimed
+and TotalDeath. This plot shows us that log2(TotalConfrimed) and
 log2(TotalDeath) had a roughly linear relationship among countries. The
 number of total deaths increases as the number of total confirmed cases
 increases. North Korea, Antarctica and Micronesia are outlines in this
