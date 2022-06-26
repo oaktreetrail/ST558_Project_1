@@ -119,6 +119,22 @@ get_confirmed_data <- function(start, end, country){
 }
 ```
 
+### 2.6 Write a function to get the confirmed, recovered, deaths based on start date and end date of any country.
+```{r}
+get_all_data <- function(start, end, country){
+  Week_list<-get_Date(start, end)
+  web_url_1<-paste0("/country/","united-states","?")
+  country_data_total = data.frame()
+  for(i in 1:length(Week_list[[1]])){
+    web_url_2<-paste0(web_url_1,"from=",Week_list[[1]][[i]],"T00:00:00Z","&to=",Week_list[[2]][[i]],"T00:00:00Z")
+    country_data <-get_Data(web_url_2)
+    country_data_total<-rbind(country_data_total,country_data)
+  }
+  return (country_data_total)
+}
+```
+
+
 # Part 3: Data manipulation 
 
 ### 3.1 Read in the summary data set on current day. 
@@ -199,7 +215,26 @@ state_names <- pull(US_NewCase_StateSum %>% arrange(desc(TotalNewCases)) %>% top
 US_NewCase_byState <- US_NewCase %>% group_by(Province, Date) %>% summarise(Sum = sum(NewCases)) %>% filter(Province %in% state_names)
 ```
 
+### 3.6 Read in the US confirmed, recovered, deaths information in the period of Jan 01, 20222 to May 31, 2022
+```{r}
+# Read in the data set
+US_all <- get_all_data("2022-01-01","2022-05-31","united-states")
 
+# Check the data quality
+apply(X= select(US_all, Confirmed: Active), MARGIN = 2, FUN = summary)
+```
+
+Based on the summary result, I am going to remove the negative values and Recovered variable from the data set. 
+
+```{r}
+# Create three new variables: NewConfirmed, NewDeaths, NewActive.
+US_all_new <- US_all %>% filter(Confirmed >= 0 & Deaths >= 0) %>%
+                group_by(Province, City) %>%
+                select(Date, Confirmed, Deaths, Active) %>%
+                mutate(NewConfirmed = Confirmed - lag(Confirmed, default = first(Confirmed)), 
+                       NewDeaths = Deaths - lag(Deaths, default = first(Deaths)),
+                       NewActive = Active - lag(Active, default = first(Active)))
+```
 
 # Part 4: EDA 
 
@@ -218,7 +253,7 @@ ggplot(mapdata1, aes(x= long, y =lat, group = group)) +
 
 # labels <- covid_summary %>% arrange(desc(TotalConfirmed)) %>% select(new_Countries) %>% slice(1:10)
 ```
-This map shows us that the United States of America has the largest total confirmed cases, followed by India. In order to further demonstrate the corona virus cases by country, two tables are created. 
+This map shows us that the United States of America has the largest total confirmed cases, followed by India and Brazil. In order to further demonstrate the corona virus cases by country, two tables are created. 
 
 ### 4.2 Summary corona virus cases by country
 ```{r}
@@ -247,7 +282,7 @@ rownames(case_summary_tab) <- c(row_names, "Total")
 datatable(case_summary_tab)
 ```
 
-This table shows us that Europe has the largest total confirmed cases, while America has the largest total deaths. The total confirmed cases and total deaths are 540740012	and 6318769, respectively. 
+This table shows us that Europe has the largest total confirmed cases, while America has the largest total deaths. The total confirmed cases and total deaths are 540740012 and 6318769, respectively. 
 
 ### 4.4 Create numerical summaries for total confirmed cases and deaths in different contients 
 ```{r}
@@ -268,7 +303,7 @@ ggplot(covid_summary_hist, aes(x= ConfirmedProportion)) +
   geom_histogram(binwidth = 0.02, fill="#69b3a2") +
   labs(title = "Histogram Plot of the Proportion of Confirmed Cases")
 ```
-This histogram shows us that most of countries had less than 20% of their population contracted the corona virus. This proportions were up to roughly 60% in some countries. However, this numbers are highly depending on the proportion of people who had covid test. 
+This histogram shows us that most of the countries had less than 20% of their population contracted the corona virus. These proportions were up to roughly 60% in some countries. However, this numbers are highly depending on the proportion of people who had covid test. 
 
 ### 4.6 Create a scatter plot to show the relationship between total confirmed cases and total deaths by country
 ```{r, warning= FALSE, fig.width= 15, fig.width= 15}
@@ -278,9 +313,9 @@ confirm_vs_death +
   geom_point() +
   scale_x_continuous(trans='log2') + scale_y_continuous(trans='log2') +
   geom_text(aes(label = Country, color = factor(continent)), size = 3.5, check_overlap = TRUE, vjust = "inward", hjust = "inward") +
-  labs(title = "Scatter Plot of the relationship between total confirmed cases and total deaths by country")
+  labs(title = "Scatter Plot of the relationship between total confirmed cases and total deaths by country", x= "log2(TotalDeaths)", y= "log2(TotalConfirmed)")
 ```
-In this scatter plot, I did log2 transformation of both TotalConfrimed and TotalDeath. This plot shows us that log2(TotalConfrimed) and log2(TotalDeath) had a roughly linear relationship among countries. The number of total deaths increases as the number of total confirmed cases increases. North Korea, Antarctica and Micronesia are outlines in this plot. This may be due to the low mortality rate in thes countries or lack of data. 
+In this scatter plot, I did log2 transformation of both TotalConfrimed and TotalDeath. This plot shows us that log2(TotalConfrimed) and log2(TotalDeath) had a roughly linear relationship among countries. The number of total deaths increases as the number of total confirmed cases increases. North Korea, Antarctica and Micronesia are outlines in this plot. This may be due to the low mortality rate in the countries or lack of data. 
 
 Since the United States had both the highest total confirmed cases and total deaths, I would like to look into some details of US in the period Jan 1, 2022 to May 31, 2022. 
 
@@ -298,23 +333,41 @@ ggplot(US_NewCase_byState, aes(x = Province, y = Sum)) +
   labs(x= "Sates", y= "Daily New Cases", title = "Box Plot of Daily New Cases in the top 10 States")
 ```
 
-This box plot shows us that California had the largest range and highest daily new cases in the period of Jan 1, 2022 to May 31, 2022. And all the top 10 states had a lot of outliners. 
+This box plot shows us that California had the largest range and highest daily new cases in the period of Jan 1, 2022 to May 31, 2022. And all the top 10 states had a lot of outliners. Then I looked into the details of the case information in California.
 
-
+### 4.9 Create a contingency table to summarize the cities in California which had daily cases greater than 5,000 in the period of Jan 1, 2022 to May 31, 2022
 ```{r}
-a <- US_NewCase %>% filter(Province == "California" & NewCases >= 5000)
-table(a$City)
+CA_NewCases <- US_NewCase %>% filter(Province == "California" & NewCases >= 5000)
+table(CA_NewCases$City)
 ```
 
+This contingency table shows us that Los Angeles had the most daily cases greater than 5,000 in the period of Jan 1, 2022 to May 31, 2022, followed by San Diego. 
 
+### 4.10 Create a Bar Plot of Days of Daily New Cases exceeded 5,000 in California
+```{r}
+ggplot(CA_NewCases, aes(x= City)) + 
+  geom_bar(fill="#69b3a2") + 
+  theme(axis.text.x = element_text(angle = 45)) +
+  labs(x= "California", y= "Days of Daily New Cases exceeded 5,000", title = "Bar Plot of Days of Daily New Cases exceeded 5,000 in California")
+```
 
+This bar plot shows us that Los Angeles had the most days with daily cases greater than 5,000 in the period of Jan 1, 2022 to May 31, 2022, followed by San Diego. 
+### 4.11 Create a bar plot to show the daily new cases in Los Angeles, CA in the period of Jan 1, 2022 to May 31, 2022. 
+```{r,message= FALSE}
+LA_all <- US_all_new %>% filter(Province == "California" & City == "Los Angeles") %>% 
+                         select(Date, NewConfirmed : NewActive) %>%
+                         pivot_longer(cols = 4:6, names_to = "CaseType", values_to = "Cases")
 
+LA_all$Date <- as.Date(substr(LA_all$Date, 1, 11))
 
+ggplot(data = LA_all, aes(x = Date, y = Cases)) +
+  geom_col(aes(fill =CaseType))+
+  theme(axis.text.x = element_text(angle = 45, size = 8.5)) +
+  labs(title = "Daily New Cases in Los Angeles, CA")
+```
 
+This plot shows us that the corona virus cases surged in January,2022 in Los Angeles, CA. The new daily deaths were much samller than the new active and new confirmed cases. So, it is hard to see it in the plot. 
 
+### Part 5: Conclusions
 
-
-
-
-
-
+In this project, I created six functions (get_Data, countries_Names, countries_Names_pop, get_Date, get_confirmed_data and  get_all_data) to interact with the coronavirus API. The data were pulled from three endpoints (Summary, By Country and All Status By Country). First, I plotted spatial data to show the coronavirus cases in the world map. This map indicated that the United States of America had the largest total confirmed cases, followed by India and Brazil. This conclusion was confirmed by the coronavirus case summary by country.  Europe had the largest total confirmed cases, while America had the largest total deaths.Then, I created a histogram to show that most of the countries had less than 20% of their population contracted the coronavirus. These proportions were up to roughly 60% in some countries. The scatter plot showed us that log2(TotalConfrimed) and log2(TotalDeath) had a roughly linear relationship among countries. Since the US had the largest numbers of cases, I further looked into the data in the US. California had the highest case numbers in the period of Jan 1, 2022 to May 31, 2022, followed by Florida and Texas. In California, Los Angeles had the most days with daily cases greater than 5,000. And the cases surged in Jan 2022 in Los Angeles, CA. 
