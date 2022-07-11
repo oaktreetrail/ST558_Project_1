@@ -447,7 +447,7 @@ confirm_vs_death +
   geom_point() +
   scale_x_continuous(trans='log2') + scale_y_continuous(trans='log2') +
   geom_text(aes(label = Country, color = factor(continent)), size = 3.5, check_overlap = TRUE, vjust = "inward", hjust = "inward") +
-  labs(title = "Scatter Plot of the relationship between total confirmed cases and total deaths by country", x= "log2(TotalDeaths)", y= "log2(TotalConfirmed)")
+  labs(title = "Scatter Plot of the relationship between total confirmed cases and total deaths by country", y= "log2(TotalDeaths)", x= "log2(TotalConfirmed)")
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
